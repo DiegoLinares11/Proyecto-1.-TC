@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Set;
 
 public class main {
     public static void main(String[] args) {
@@ -24,25 +25,30 @@ public class main {
                     String astFilename = "ast_" + count + ".dot";
                     DrawAST.draw(root, astFilename);
 
-                    // Generar el AFN desde el AST
+                    // Generar el NFA desde el AST
                     NFA nfa = root.toNFA();
 
-                    // Visualizar el AFN generado en un archivo .dot
-                    NFAtoGraphvizVisitor nfaVisitor = new NFAtoGraphvizVisitor();
-                    nfaVisitor.visit(nfa.start);
-                    String nfaGraph = nfaVisitor.getGraph();
-                    String nfaFilename = "nfa_" + count + ".dot";
-                    try (FileWriter writer = new FileWriter(nfaFilename)) {
-                        writer.write(nfaGraph);
-                    }
-                    Runtime.getRuntime().exec(new String[] { "dot", "-Tpng", nfaFilename, "-o", nfaFilename + ".png" });
+                    // Convertir el NFA a DFA
+                    DFA dfa = SubsetConstruction.constructDFA(nfa);
 
-                    // Simulación del AFN con una cadena de prueba y un límite de visitas
-                    int visitLimit = 4; // Número de veces que un estado puede ser visitado
+                    // Minimizar el DFA
+                    DFA minimizedDFA = DFAMinimization.minimizeDFA(dfa);
+
+                    // Visualizar el DFA minimizado en un archivo .dot
+                    DFAToGraphvizVisitor dfaVisitor = new DFAToGraphvizVisitor();
+                    dfaVisitor.visit(minimizedDFA);
+                    String dfaGraph = dfaVisitor.getGraph();
+                    String dfaFilename = "dfa_" + count + ".dot";
+                    try (FileWriter writer = new FileWriter(dfaFilename)) {
+                        writer.write(dfaGraph);
+                    }
+                    Runtime.getRuntime().exec(new String[] { "dot", "-Tpng", dfaFilename, "-o", dfaFilename + ".png" });
+
+                    // Simulación del DFA con una cadena de prueba
                     String cadena = "aab";
-                    boolean result = nfa.simulate(cadena, visitLimit);
+                    boolean result = minimizedDFA.simulate(cadena, Integer.MAX_VALUE);
                     System.out.println(
-                            "La cadena: " + cadena + " es " + (result ? "aceptada" : "rechazada") + " por el AFN.");
+                            "La cadena: " + cadena + " es " + (result ? "aceptada" : "rechazada") + " por el DFA.");
 
                     count++;
                 } catch (IllegalArgumentException e) {

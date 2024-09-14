@@ -1,7 +1,8 @@
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.util.HashMap;
 
 class NFA {
     State start;
@@ -50,5 +51,31 @@ class NFA {
         }
 
         return false;
+    }
+
+    // Método para obtener el conjunto de símbolos del alfabeto del NFA
+    public Set<Character> getAlphabet() {
+        Set<Character> alphabet = new HashSet<>();
+        Set<State> visited = new HashSet<>();
+        collectAlphabet(start, alphabet, visited);
+        return alphabet;
+    }
+
+    // Método recursivo que recolecta el alfabeto a partir de las transiciones
+    private void collectAlphabet(State state, Set<Character> alphabet, Set<State> visited) {
+        if (visited.contains(state)) {
+            return;
+        }
+        visited.add(state);
+
+        for (Map.Entry<Character, List<State>> entry : state.transitions.entrySet()) {
+            char symbol = entry.getKey();
+            if (symbol != 'e') { // Ignorar transiciones epsilon
+                alphabet.add(symbol);
+            }
+            for (State nextState : entry.getValue()) {
+                collectAlphabet(nextState, alphabet, visited); // Recorrer los estados adyacentes
+            }
+        }
     }
 }
