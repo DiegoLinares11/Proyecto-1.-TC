@@ -1,27 +1,32 @@
 import java.util.*;
 
 class SubsetConstruction {
+
     public static DFA constructDFA(NFA nfa) {
         Map<Set<State>, State> subsetToDFAState = new HashMap<>();
         Queue<Set<State>> queue = new LinkedList<>();
-        Set<Character> alphabet = nfa.getAlphabet(); // Asegúrate de usar el alfabeto del NFA
+        Set<Character> alphabet = nfa.getAlphabet(); // Obtener el alfabeto del NFA
+        System.out.println("Alfabeto extraído del NFA: " + alphabet);
 
         Set<State> startSubset = epsilonClosure(Collections.singleton(nfa.start));
+        System.out.println("Estado inicial del DFA: " + startSubset);
         State startState = new State(generateId(), containsAcceptState(startSubset));
         subsetToDFAState.put(startSubset, startState);
         queue.add(startSubset);
 
-        DFA dfa = new DFA(startState);
-        dfa.alphabet.addAll(alphabet); // Agregar el alfabeto al DFA
+        // Usa el constructor que toma el alfabeto
+        DFA dfa = new DFA(startState, alphabet);  // Pasar el alfabeto aquí
+        System.out.println("Alfabeto en el DFA: " + dfa.getAlphabet());
 
+        
         while (!queue.isEmpty()) {
             Set<State> currentSubset = queue.poll();
             State currentDFAState = subsetToDFAState.get(currentSubset);
-
-            for (char symbol : alphabet) { // Usar el alfabeto del DFA
+    
+            for (char symbol : alphabet) {  // Usar el alfabeto del DFA
                 Set<State> nextSubset = move(currentSubset, symbol);
                 nextSubset = epsilonClosure(nextSubset);
-
+    
                 if (!nextSubset.isEmpty()) {
                     State nextDFAState = subsetToDFAState.get(nextSubset);
                     if (nextDFAState == null) {
@@ -30,12 +35,14 @@ class SubsetConstruction {
                         queue.add(nextSubset);
                     }
                     currentDFAState.addDFATransition(symbol, nextDFAState);
+                    System.out.println("Agregando transición DFA para símbolo: " + symbol);
                 }
             }
         }
-
+    
         return dfa;
-    }
+    }    
+    
 
     private static Set<State> epsilonClosure(Set<State> states) {
         Set<State> closure = new HashSet<>(states);

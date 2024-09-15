@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Set;
 
 public class main {
     public static void main(String[] args) {
@@ -30,6 +29,7 @@ public class main {
 
                     // Convertir el NFA a DFA
                     DFA dfa = SubsetConstruction.constructDFA(nfa);
+                    dfa.removeUnreachableStates();  // Elimina estados no alcanzables
 
                     // Minimizar el DFA
                     DFA minimizedDFA = DFAMinimization.minimizeDFA(dfa);

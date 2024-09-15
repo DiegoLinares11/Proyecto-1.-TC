@@ -21,6 +21,7 @@ class OperandNode extends ASTNode {
         State start = new State(IDGenerator.getNextId(), false);
         State accept = new State(IDGenerator.getNextId(), true);
         start.addTransition(this.value, accept);
+        System.out.println("Creando NFA para operando: " + this.value); // Debug
         return new NFA(start, accept);
     }
 }
@@ -44,6 +45,7 @@ class OperatorNode extends ASTNode {
     NFA toNFA() {
         NFA leftNFA = left.toNFA();
         NFA rightNFA = right.toNFA();
+        System.out.println("Construyendo NFA para operador: " + this.operator);
 
         State start = new State(IDGenerator.getNextId(), false);
         State accept = new State(IDGenerator.getNextId(), true);

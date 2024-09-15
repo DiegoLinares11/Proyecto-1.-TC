@@ -61,7 +61,6 @@ class NFA {
         return alphabet;
     }
 
-    // Método recursivo que recolecta el alfabeto a partir de las transiciones
     private void collectAlphabet(State state, Set<Character> alphabet, Set<State> visited) {
         if (visited.contains(state)) {
             return;
@@ -78,4 +77,5 @@ class NFA {
             }
         }
     }
+
 }

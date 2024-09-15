@@ -1,6 +1,3 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.Stack;
 
 public class ShuntingYard {
@@ -57,27 +54,21 @@ public class ShuntingYard {
         infix = insertExplicitConcatOperator(infix); // Luego insertamos los operadores de concatenación
         StringBuilder output = new StringBuilder();
         Stack<Character> stack = new Stack<>();
-
+    
         for (int i = 0; i < infix.length(); i++) {
             char c = infix.charAt(i);
-
-            // Si el caracter es un operando o 'e', añadirlo a la salida
+            System.out.println("Procesando carácter: " + c);  // Debug: Ver qué carácter se procesa
+    
             if (Character.isLetterOrDigit(c) || c == 'e') {
                 output.append(c);
-            }
-            // Si el carácter es un paréntesis de apertura, añadirlo a la pila
-            else if (c == '(') {
+            } else if (c == '(') {
                 stack.push(c);
-            }
-            // Si el carácter es un parénntesis de cierre
-            else if (c == ')') {
+            } else if (c == ')') {
                 while (!stack.isEmpty() && stack.peek() != '(') {
                     output.append(stack.pop());
                 }
                 stack.pop();
-            }
-            // Si el caráccter es un operador
-            else if (isOperator(c)) {
+            } else if (isOperator(c)) {
                 while (!stack.isEmpty() && precedence(c) <= precedence(stack.peek())) {
                     if (isRightAssociative(c) && precedence(c) == precedence(stack.peek())) {
                         break;
@@ -88,12 +79,14 @@ public class ShuntingYard {
                 stack.push(c);
             }
         }
-
+    
         // Sacar todos los operadores restantes de la pila
         while (!stack.isEmpty()) {
             output.append(stack.pop());
         }
-
+    
+        System.out.println("Postfix resultante: " + output.toString()); // Debug: Mostrar postfix
         return output.toString();
     }
+    
 }
