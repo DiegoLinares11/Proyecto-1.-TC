@@ -1,16 +1,22 @@
 import java.util.*;
 
 class DFA {
-    State start;
     Set<State> states;
-    private Set<State> acceptStates; // Conjunto de estados de aceptación
-    public Set<Character> alphabet; // Conjunto de símbolos del alfabeto
+    Set<State> acceptStates;
+    State startState;
+    Set<Character> alphabet;  // This is your alphabet set
 
-    public DFA(State start) {
-        this.start = start;
+    // Constructor of DFA
+    public DFA(State startState) {
+        this.startState = startState;
         this.states = new HashSet<>();
         this.acceptStates = new HashSet<>();
-        this.alphabet = new HashSet<>();  // Inicializar un alfabeto vacío
+        this.alphabet = new HashSet<>();  // Ensure alphabet is initialized here
+        this.states.add(startState);
+    }
+
+    public void addSymbolToAlphabet(char symbol) {
+        alphabet.add(symbol);  // Ensure this is not null
     }
 
     public DFA(State start, Set<Character> alphabet) {
@@ -20,15 +26,18 @@ class DFA {
     
     // Agrega un estado al conjunto de estados del AFD
     public void addState(State state) {
-        this.states.add(state);
-        if (state.isAccept) {
-            this.acceptStates.add(state);
+        if (!states.contains(state)) {
+            System.out.println("Añadiendo estado al DFA: " + state.id);
+            states.add(state);  // Añadir el estado al conjunto de estados
+            if (state.isAccept) {
+                acceptStates.add(state);  // Si es un estado de aceptación, añadirlo al conjunto
+            }
         }
     }
 
     // Devuelve el estado inicial
     public State getStartState() {
-        return start;
+        return startState;
     }
 
     // Devuelve el conjunto de todos los estados del AFD
@@ -52,53 +61,29 @@ class DFA {
     }
 
     // Simula la aceptación de una cadena con un límite de visitas
-    public boolean simulate(String input, int visitLimit) {
-        State currentState = start;
-        int visitCount = 0;
-    
-        System.out.println("Simulando entrada: " + input);  // Debug
+    public boolean simulate(String input) {
+        State currentState = startState;
     
         for (char symbol : input.toCharArray()) {
-            // Verifica que el currentState no sea nulo antes de acceder a él
-            if (currentState == null) {
-                System.out.println("El estado actual es nulo. No hay transición para el símbolo: " + symbol);
-                return false;
-            }
-            
-            System.out.println("Procesando símbolo: " + symbol + " en estado: " + currentState.id);
-    
             if (!alphabet.contains(symbol)) {
-                System.out.println("Alfabeto del DFA: " + alphabet);  // Asegúrate de imprimir el alfabeto correcto
                 throw new IllegalArgumentException("Símbolo no reconocido: " + symbol);
             }
-    
-            // Obtener el siguiente estado basado en el símbolo actual
-            currentState = currentState.dfaTransitions.get(symbol);
-            
-            // Verificación adicional si la transición es nula
+            currentState = currentState.getDFATransition(symbol);
             if (currentState == null) {
-                System.out.println("No hay transición para el símbolo: " + symbol + " desde el estado actual.");
-                return false;
-            }
-    
-            visitCount++;
-            if (visitCount >= visitLimit) {
-                throw new IllegalStateException("Límite de visitas alcanzado");
+                return false;  // Transición no encontrada para el símbolo dado
             }
         }
     
-        System.out.println("La cadena fue aceptada: " + isAcceptingState(currentState));
-        return isAcceptingState(currentState);
-    }
+        return currentState.isAccept;
+    }    
     
-      
 
     //Metodo para eliminar los estados no alcanzables
     public void removeUnreachableStates() {
         Set<State> reachable = new HashSet<>();
         Queue<State> queue = new LinkedList<>();
-        queue.add(start);
-        reachable.add(start);
+        queue.add(startState);
+        reachable.add(startState);
 
         while (!queue.isEmpty()) {
             State current = queue.poll();
@@ -115,8 +100,7 @@ class DFA {
         acceptStates.retainAll(reachable);
     }
 
-    // Método para agregar un símbolo al alfabeto
-    public void addSymbolToAlphabet(char symbol) {
-        this.alphabet.add(symbol);
+    public boolean isSymbolValid(char symbol) {
+        return alphabet.contains(symbol);  // Verifica si el símbolo está en el alfabeto
     }
 }

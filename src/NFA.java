@@ -7,14 +7,24 @@ import java.util.HashMap;
 class NFA {
     State start;
     State accept;
+    Set<State> acceptStates;  // Track multiple accepting states
 
     NFA(State start, State accept) {
         this.start = start;
         this.accept = accept;
+        this.acceptStates = new HashSet<>();  // Initialize the set of accepting states
+        this.acceptStates.add(accept);        // Add the accept state
+        System.out.println("NFA created with start state: " + start.id + " and accept state: " + accept.id);  // Debug
     }
 
-    // Este método toma una cadena de entrada y simula el AFN para determinar si la
-    // cadena es aceptada
+    // Add method to mark a state as accepting and print debug information
+    public void markStateAsAccepting(State state) {
+        state.isAccept = true;
+        this.acceptStates.add(state);  // Add the state to the set of accepting states
+        System.out.println("Marking NFA state " + state.id + " as accepting.");  // Debugging output
+    }
+
+    // Este método toma una cadena de entrada y simula el AFN para determinar si la cadena es aceptada
     boolean simulate(String input, int visitLimit) {
         return simulate(start, input, 0, new HashMap<>(), visitLimit);
     }
@@ -29,6 +39,7 @@ class NFA {
         }
 
         if (index == input.length()) {
+            System.out.println("Simulation reached state " + current.id + " at end of input, is accepting: " + current.isAccept);  // Debugging output
             return current.isAccept;
         }
 

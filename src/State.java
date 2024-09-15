@@ -18,8 +18,10 @@ class State {
 
     // Método para agregar una transición de AFD (debe ir a un solo estado)
     void addDFATransition(char symbol, State toState) {
-        dfaTransitions.put(symbol, toState);
+        System.out.println("Adding transition: " + this.id + " -> " + toState.id + " with symbol: " + symbol);
+        dfaTransitions.put(symbol, toState);  // Ensure that the transitions are stored in the map
     }
+    
 
     // Obtener las transiciones para el AFN
     List<State> getNFATransitions(char symbol) {

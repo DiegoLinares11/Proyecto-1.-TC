@@ -45,10 +45,9 @@ class OperatorNode extends ASTNode {
     NFA toNFA() {
         NFA leftNFA = left.toNFA();
         NFA rightNFA = right.toNFA();
-        System.out.println("Construyendo NFA para operador: " + this.operator);
 
         State start = new State(IDGenerator.getNextId(), false);
-        State accept = new State(IDGenerator.getNextId(), true);
+        State accept = new State(IDGenerator.getNextId(), true);  // Este es el estado de aceptación
 
         if (operator == '|') {
             start.addTransition('e', leftNFA.start);

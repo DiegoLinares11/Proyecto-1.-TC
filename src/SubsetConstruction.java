@@ -5,60 +5,90 @@ class SubsetConstruction {
     public static DFA constructDFA(NFA nfa) {
         Map<Set<State>, State> subsetToDFAState = new HashMap<>();
         Queue<Set<State>> queue = new LinkedList<>();
-        Set<Character> alphabet = nfa.getAlphabet(); // Obtener el alfabeto del NFA
-        System.out.println("Alfabeto extraído del NFA: " + alphabet);
-
+        Set<Character> alphabet = nfa.getAlphabet();
+    
+        // Get the epsilon closure of the initial NFA state
         Set<State> startSubset = epsilonClosure(Collections.singleton(nfa.start));
-        System.out.println("Estado inicial del DFA: " + startSubset);
-        State startState = new State(generateId(), containsAcceptState(startSubset));
+        
+        // Create the initial DFA state
+        boolean isStartAccept = containsAcceptState(startSubset);  // Check if the start state is accepting
+        State startState = new State(generateId(), isStartAccept);
         subsetToDFAState.put(startSubset, startState);
         queue.add(startSubset);
-
-        // Usa el constructor que toma el alfabeto
-        DFA dfa = new DFA(startState, alphabet);  // Pasar el alfabeto aquí
-        System.out.println("Alfabeto en el DFA: " + dfa.getAlphabet());
-
-        
+    
+        // Debugging: Log the acceptance status of the starting state
+        System.out.println("DFA Start state created with id " + startState.id + ", isAccept: " + startState.isAccept);
+    
+        // Create the DFA
+        DFA dfa = new DFA(startState);
+    
         while (!queue.isEmpty()) {
             Set<State> currentSubset = queue.poll();
             State currentDFAState = subsetToDFAState.get(currentSubset);
     
-            for (char symbol : alphabet) {  // Usar el alfabeto del DFA
+            // Debugging: Log each state being processed
+            System.out.println("Processing DFA state with id " + currentDFAState.id + " and isAccept: " + currentDFAState.isAccept);
+    
+            // Add the current state to the DFA if it hasn't been added yet
+            dfa.addState(currentDFAState);
+    
+            // For each symbol in the alphabet, compute the next subset of states
+            for (char symbol : alphabet) {
                 Set<State> nextSubset = move(currentSubset, symbol);
-                nextSubset = epsilonClosure(nextSubset);
+                nextSubset = epsilonClosure(nextSubset);  // Compute epsilon closure
     
                 if (!nextSubset.isEmpty()) {
+                    // Check if this subset already corresponds to a DFA state
                     State nextDFAState = subsetToDFAState.get(nextSubset);
                     if (nextDFAState == null) {
-                        nextDFAState = new State(generateId(), containsAcceptState(nextSubset));
+                        boolean isAccept = containsAcceptState(nextSubset);  // Check if any of the states in the subset is accepting
+    
+                        // Debugging: Print out the acceptance status of the new DFA state
+                        System.out.println("Creating DFA state for subset with isAccept: " + isAccept);
+    
+                        nextDFAState = new State(generateId(), isAccept);  // Create a new DFA state
                         subsetToDFAState.put(nextSubset, nextDFAState);
                         queue.add(nextSubset);
                     }
+    
+                    // Add the transition from the current DFA state to the next DFA state
                     currentDFAState.addDFATransition(symbol, nextDFAState);
-                    System.out.println("Agregando transición DFA para símbolo: " + symbol);
                 }
             }
         }
     
         return dfa;
-    }    
+    }                   
+    
+    // Este método verifica si un subconjunto de estados contiene un estado de aceptación
+    private static boolean containsAcceptState(Set<State> states) {
+        for (State state : states) {
+            // Debugging: Print which state is being checked
+            System.out.println("Checking if state " + state.id + " is accepting: " + state.isAccept);
+            if (state.isAccept) {
+                return true;  // Return true if any NFA state in the set is accepting
+            }
+        }
+        return false;  // Return false if none of the states in the subset are accepting
+    }       
     
 
     private static Set<State> epsilonClosure(Set<State> states) {
         Set<State> closure = new HashSet<>(states);
-        Stack<State> stack = new Stack<>();
-        stack.addAll(states);
-
-        while (!stack.isEmpty()) {
-            State state = stack.pop();
-            for (State nextState : state.getNFATransitions('\0')) {
-                if (!closure.contains(nextState)) {
-                    closure.add(nextState);
-                    stack.add(nextState);
+        Queue<State> queue = new LinkedList<>(states);
+    
+        while (!queue.isEmpty()) {
+            State state = queue.poll();
+            List<State> epsilonTransitions = state.transitions.get('e');
+            if (epsilonTransitions != null) {
+                for (State nextState : epsilonTransitions) {
+                    if (closure.add(nextState)) {  // Si el estado no está en el cierre, agrégalo
+                        queue.add(nextState);
+                    }
                 }
             }
         }
-
+    
         return closure;
     }
 
@@ -68,15 +98,6 @@ class SubsetConstruction {
             result.addAll(state.getNFATransitions(symbol));
         }
         return result;
-    }
-
-    private static boolean containsAcceptState(Set<State> states) {
-        for (State state : states) {
-            if (state.isAccept) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static int idCounter = 0;

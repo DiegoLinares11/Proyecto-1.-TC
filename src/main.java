@@ -26,13 +26,21 @@ public class main {
 
                     // Generar el NFA desde el AST
                     NFA nfa = root.toNFA();
-
+                    System.out.println("Estado de aceptación en el NFA: " + nfa.accept.isAccept);
                     // Convertir el NFA a DFA
                     DFA dfa = SubsetConstruction.constructDFA(nfa);
+                    if (dfa == null) {
+                        System.out.println("Error: El DFA es null. No se puede continuar.");
+                        return;
+                    }
                     dfa.removeUnreachableStates();  // Elimina estados no alcanzables
 
                     // Minimizar el DFA
                     DFA minimizedDFA = DFAMinimization.minimizeDFA(dfa);
+                    if (minimizedDFA == null) {
+                        System.out.println("Error: El DFA minimizado es null.");
+                        return;
+                    }
 
                     // Visualizar el DFA minimizado en un archivo .dot
                     DFAToGraphvizVisitor dfaVisitor = new DFAToGraphvizVisitor();
@@ -46,7 +54,7 @@ public class main {
 
                     // Simulación del DFA con una cadena de prueba
                     String cadena = "aab";
-                    boolean result = minimizedDFA.simulate(cadena, Integer.MAX_VALUE);
+                    boolean result = minimizedDFA.simulate(cadena);
                     System.out.println(
                             "La cadena: " + cadena + " es " + (result ? "aceptada" : "rechazada") + " por el DFA.");
 
