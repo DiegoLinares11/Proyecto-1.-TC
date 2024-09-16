@@ -1,19 +1,54 @@
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 class DFAMinimization {
-    
+
+    // Aquí implementamos la minimización real
     public static DFA minimizeDFA(DFA dfa) {
         if (dfa == null) {
-            System.out.println("Error: DFA es null al intentar minimizarlo.");
+            System.out.println("Error: El DFA es null. No se puede continuar.");
             return null;
         }
     
-        System.out.println("Minimizando DFA...");
+        // Refinar particiones usando el algoritmo de partición completo
+        Set<Set<State>> partitions = partitionDFA(dfa);
+        DFA minimizedDFA = buildMinimizedDFA(partitions, dfa);
     
-        // Crear particiones de estados de aceptación y no aceptación
+        if (minimizedDFA == null) {
+            System.out.println("Error: El DFA minimizado es null.");
+            return null;
+        }
+    
+        // Visualizar el DFA minimizado en un archivo .dot
+        DFAToGraphvizVisitor dfaVisitor = new DFAToGraphvizVisitor();
+        dfaVisitor.visit(minimizedDFA);
+        String dfaGraph = dfaVisitor.getGraph();
+        String dfaFilename = "dfa_minimized.dot";
+        try (FileWriter writer = new FileWriter(dfaFilename)) {
+            writer.write(dfaGraph);
+        } catch (IOException e) {
+            System.err.println("Error escribiendo archivo Graphviz: " + e.getMessage());
+        }
+        try {
+            Runtime.getRuntime().exec(new String[]{"dot", "-Tpng", dfaFilename, "-o", dfaFilename + ".png"});
+        } catch (IOException e) {
+            System.err.println("Error ejecutando Graphviz: " + e.getMessage());
+        }
+    
+        // Simulación del DFA minimizado con una cadena de prueba
+        String cadena = "aab";  // Cambia esta cadena según el test que quieras
+        boolean result = minimizedDFA.simulate(cadena);
+        System.out.println("La cadena: " + cadena + " es " + (result ? "aceptada" : "rechazada") + " por el DFA minimizado.");
+    
+        return minimizedDFA;
+    }    
+
+    // Método para particionar el DFA (refinamiento de particiones)
+    private static Set<Set<State>> partitionDFA(DFA dfa) {
         Set<State> acceptingStates = new HashSet<>();
         Set<State> nonAcceptingStates = new HashSet<>();
-    
+
         // Clasificar los estados correctamente como aceptantes y no aceptantes
         for (State state : dfa.getStates()) {
             if (state.isAccept) {
@@ -22,125 +57,90 @@ class DFAMinimization {
                 nonAcceptingStates.add(state);
             }
         }
-    
-        // Debug: Imprimir la cantidad de estados de aceptación y no aceptación
-        System.out.println("Cantidad de estados de aceptación: " + acceptingStates.size());
-        System.out.println("Cantidad de estados de no aceptación: " + nonAcceptingStates.size());
-    
-        // Si no hay estados de aceptación o no aceptación, imprime una advertencia
-        if (acceptingStates.isEmpty() || nonAcceptingStates.isEmpty()) {
-            System.out.println("Advertencia: No hay suficientes estados de aceptación o no aceptación en el DFA para minimizar.");
-            
-            // Forcefully separate states into accepting and non-accepting by selecting at least one state for each partition
-            if (acceptingStates.isEmpty()) {
-                System.out.println("Forcing partition - treating first state as non-accepting.");
-                State forcedNonAccepting = dfa.getStates().iterator().next();  // Take any state and force it to be non-accepting
-                nonAcceptingStates.add(forcedNonAccepting);
-            } else if (nonAcceptingStates.isEmpty()) {
-                System.out.println("Forcing partition - treating first state as accepting.");
-                State forcedAccepting = dfa.getStates().iterator().next();  // Take any state and force it to be accepting
-                acceptingStates.add(forcedAccepting);
-            }
-        
-            // If there is only one partition, print a warning and return the original DFA
-            return dfa;  // Devuelve el DFA original si no es posible minimizar
-        }
-               
-        // Particionar los estados iniciales en aceptación y no aceptación
-        Set<Set<State>> partitions = new HashSet<>();
-        partitions.add(acceptingStates);
-        partitions.add(nonAcceptingStates);
 
-        // Debug: Imprimir las particiones iniciales
-        System.out.println("Particiones iniciales:");
-        printPartitions(partitions);
-    
+        Set<Set<State>> partitions = new HashSet<>();
+        if (!acceptingStates.isEmpty()) partitions.add(acceptingStates);
+        if (!nonAcceptingStates.isEmpty()) partitions.add(nonAcceptingStates);
+
+        // Refinar las particiones
         boolean refined;
         do {
             refined = false;
             Set<Set<State>> newPartitions = new HashSet<>();
-    
+
+            // Refinar particiones basadas en las transiciones
             for (Set<State> partition : partitions) {
                 Map<Map<State, Character>, Set<State>> transitionGroups = new HashMap<>();
 
-                // Crear transiciones para cada estado
+                // Agrupar estados por transiciones
                 for (State state : partition) {
                     Map<State, Character> transitions = new HashMap<>();
                     for (Map.Entry<Character, State> entry : state.dfaTransitions.entrySet()) {
                         transitions.put(entry.getValue(), entry.getKey());
                     }
-
                     transitionGroups.computeIfAbsent(transitions, k -> new HashSet<>()).add(state);
                 }
 
+                // Añadir particiones refinadas
                 newPartitions.addAll(transitionGroups.values());
 
-                // Si las transiciones crean nuevas particiones, marca el refinamiento
                 if (transitionGroups.size() > 1) {
                     refined = true;
                 }
             }
-    
-            partitions = newPartitions;
 
-            // Debug: Imprimir las particiones después de cada refinamiento
-            System.out.println("Particiones después del refinamiento:");
-            printPartitions(partitions);
-    
-        } while (refined);
-    
-        // Si no hay particiones válidas, imprime un error
-        if (partitions.isEmpty()) {
-            System.out.println("Error: No se pudieron generar particiones durante la minimización.");
-            return null;
-        }
-    
-        // Ahora construimos el DFA minimizado
-        Map<State, State> stateMapping = new HashMap<>();
+            partitions = newPartitions;  // Actualizar particiones refinadas
+
+        } while (refined);  // Repetir mientras haya refinamientos
+
+        return partitions;
+    }
+
+
+    // Método para construir el DFA minimizado
+    private static DFA buildMinimizedDFA(Set<Set<State>> partitions, DFA dfa) {
+        Map<State, State> stateMapping = new HashMap<>(); // Mapeo de estados originales a estados minimizados
         DFA minimizedDFA = null;
     
+        // Iterar sobre cada partición y crear un estado representativo para cada partición
         for (Set<State> partition : partitions) {
-            State representative = partition.iterator().next();  // Seleccionar el estado representativo de la partición
-            State newState = new State(representative.id, representative.isAccept);  // Crear nuevo estado
-            stateMapping.put(representative, newState);
+            // Asegurarse de que la partición no esté vacía
+            if (partition.isEmpty()) {
+                continue;  // Saltar partición vacía
+            }
     
+            // Seleccionar un estado representativo para la partición
+            State representative = partition.iterator().next();
+    
+            // Crear un nuevo estado en el DFA minimizado
+            State newState = new State(representative.id, representative.isAccept); // Se crea el estado combinando los originales
+            for (State state : partition) {
+                stateMapping.put(state, newState);  // Mapear todos los estados de la partición al nuevo estado
+            }
+    
+            // Agregar el nuevo estado al DFA minimizado
             if (minimizedDFA == null) {
-                minimizedDFA = new DFA(newState);  // Definir el estado inicial
+                minimizedDFA = new DFA(newState);  // Definir el estado inicial del DFA
             } else {
-                minimizedDFA.addState(newState);
+                minimizedDFA.addState(newState);   // Agregar el nuevo estado al DFA
             }
         }
     
-        if (minimizedDFA == null) {
-            System.out.println("Error: DFA minimizado es null.");
-            return null;
-        }
-    
-        // Copiar las transiciones del DFA original al minimizado
+        // Ahora copiar las transiciones desde el DFA original al DFA minimizado
         for (State oldState : stateMapping.keySet()) {
-            State newState = stateMapping.get(oldState);
+            State newState = stateMapping.get(oldState);  // Obtener el estado combinado del minimizado
             for (Map.Entry<Character, State> entry : oldState.dfaTransitions.entrySet()) {
                 char symbol = entry.getKey();
                 State oldTargetState = entry.getValue();
-                newState.addDFATransition(symbol, stateMapping.get(oldTargetState));
+                if (oldTargetState != null && stateMapping.get(oldTargetState) != null) {
+                    // Añadir la transición al nuevo estado en el DFA minimizado
+                    newState.addDFATransition(symbol, stateMapping.get(oldTargetState));
+                }
             }
         }
-
+    
         System.out.println("DFA minimizado con éxito.");
         return minimizedDFA;
     }
 
-    // Método auxiliar para imprimir particiones
-    private static void printPartitions(Set<Set<State>> partitions) {
-        System.out.println("Particiones iniciales:");
-        printPartitions(partitions);
-
-        for (Set<State> partition : partitions) {
-            System.out.print("Partición: ");
-            for (State state : partition) {
-                System.out.print(state.id + " ");
-            }
-            System.out.println();
-        }
-    }
 }
