@@ -58,6 +58,11 @@ public class main {
                     System.out.println(
                             "La cadena: " + cadena + " es " + (result ? "aceptada" : "rechazada") + " por el AFN.");
 
+                    // Simulación del AFD con la misma cadena de prueba
+                    boolean resultDFA = dfa.simulate(cadena);
+                    System.out.println(
+                            "La cadena: " + cadena + " es " + (resultDFA ? "aceptada" : "rechazada") + " por el AFD.");
+
                     count++;
                 } catch (IllegalArgumentException e) {
                     System.err.println("Error procesando la expresión: " + line);
