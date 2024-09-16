@@ -21,18 +21,25 @@ public class DFAToGraphvizVisitor {
         if (visited.contains(state))
             return;
         visited.add(state);
-
+    
         // Agrega el nodo al gráfico
         sb.append(String.format("node%d [shape=%s];\n",
                 state.id, state.isAccept ? "doublecircle" : "circle"));
-
+    
+        // Verifica si hay transiciones para el estado actual
+        Map<Character, DFAState> stateTransitions = dfa.transitions.get(state);
+        if (stateTransitions == null) {
+            return; // No hay transiciones, retornar
+        }
+    
         // Recorre las transiciones
-        for (Map.Entry<Character, DFAState> entry : dfa.transitions.get(state).entrySet()) {
+        for (Map.Entry<Character, DFAState> entry : stateTransitions.entrySet()) {
             DFAState target = entry.getValue();
             sb.append(String.format("node%d -> node%d [label=\"%c\"];\n", state.id, target.id, entry.getKey()));
             visitState(target, dfa);
         }
     }
+    
 
     public String getGraph() {
         sb.append("}\n");
