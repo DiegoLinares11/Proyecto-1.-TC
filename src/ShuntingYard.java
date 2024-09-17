@@ -40,9 +40,29 @@ public class ShuntingYard {
         return !isOperator(c) && !isSpecialSymbol(c);
     }
 
-    // Método para reemplazar `?` por `|e`
+    // quiero (algo|e)
     private static String replaceQuestionMark(String regex) {
-        return regex.replace("?", "|e");
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < regex.length(); i++) {
+            char c = regex.charAt(i);
+
+            if (c == '?') {
+
+                int lastIndex = result.length() - 1;
+                char lastChar = result.charAt(lastIndex);
+
+                if (lastChar == ')') {
+                    result.replace(lastIndex + 1, lastIndex + 1, "|e");
+                } else {
+                    result.replace(lastIndex, lastIndex + 1, "(" + lastChar + "|e)");
+                }
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
     }
 
     // Reconocer que si estan juntos hay que ingresar un operador de concatenación

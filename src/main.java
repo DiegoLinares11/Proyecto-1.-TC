@@ -5,7 +5,6 @@ import java.io.IOException;
 
 public class main {
     public static void main(String[] args) {
-        // Nombre del archivo que contiene las expresiones regulares
         String filename = "src/expresiones.txt";
 
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {

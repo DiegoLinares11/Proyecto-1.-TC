@@ -26,6 +26,12 @@ public class DFAToGraphvizVisitor {
         sb.append(String.format("node%d [shape=%s];\n",
                 state.id, state.isAccept ? "doublecircle" : "circle"));
 
+        // Verifica si hay transiciones para el estado actual
+        Map<Character, DFAState> stateTransitions = dfa.transitions.get(state);
+        if (stateTransitions == null) {
+            return; // No hay transiciones, retornar
+        }
+
         // Recorre las transiciones
         for (Map.Entry<Character, DFAState> entry : dfa.transitions.get(state).entrySet()) {
             DFAState target = entry.getValue();
