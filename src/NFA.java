@@ -1,5 +1,6 @@
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,17 +13,34 @@ class NFA {
         this.accept = accept;
     }
 
-    // Este método toma una cadena de entrada y simula el AFN para determinar si la
-    // cadena es aceptada
+    // Método para obtener todos los estados del AFN
+    Set<State> getAllStates() {
+        Set<State> allStates = new HashSet<>();
+        exploreStates(start, allStates);
+        return allStates;
+    }
+
+    // Método auxiliar para explorar estados de manera recursiva
+    private void exploreStates(State current, Set<State> visited) {
+        if (!visited.contains(current)) {
+            visited.add(current);
+            for (List<State> nextStates : current.transitions.values()) {
+                for (State next : nextStates) {
+                    exploreStates(next, visited);
+                }
+            }
+        }
+    }
+
+    // Método para simular el AFN
     boolean simulate(String input, int visitLimit) {
         return simulate(start, input, 0, new HashMap<>(), visitLimit);
     }
 
+    // Simulación recursiva con límites de visitas
     private boolean simulate(State current, String input, int index, Map<State, Integer> visitCount, int visitLimit) {
-        // Incrementa el contador de visitas para el estado actual
         visitCount.put(current, visitCount.getOrDefault(current, 0) + 1);
 
-        // Si se ha alcanzado el límite de visitas, detenerse
         if (visitCount.get(current) > visitLimit) {
             return false;
         }

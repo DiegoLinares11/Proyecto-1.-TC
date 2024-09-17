@@ -28,9 +28,41 @@ public class ShuntingYard {
         return c == '+' || c == '*' || c == '|' || c == '.';
     }
 
-    // Método para reemplazar `?` por `|e`
+    // Verificar si el carácter es un símbolo especial (no es un operador pero no es
+    // un operando)
+    private static boolean isSpecialSymbol(char c) {
+        return c == '(' || c == ')';
+    }
+
+    // Verificar si el carácter es un operando (no es un operador ni un símbolo
+    // especial)
+    private static boolean isOperand(char c) {
+        return !isOperator(c) && !isSpecialSymbol(c);
+    }
+
+    // quiero (algo|e)
     private static String replaceQuestionMark(String regex) {
-        return regex.replace("?", "|e");
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < regex.length(); i++) {
+            char c = regex.charAt(i);
+
+            if (c == '?') {
+
+                int lastIndex = result.length() - 1;
+                char lastChar = result.charAt(lastIndex);
+
+                if (lastChar == ')') {
+                    result.replace(lastIndex + 1, lastIndex + 1, "|e");
+                } else {
+                    result.replace(lastIndex, lastIndex + 1, "(" + lastChar + "|e)");
+                }
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
     }
 
     // Reconocer que si estan juntos hay que ingresar un operador de concatenación
@@ -42,8 +74,8 @@ public class ShuntingYard {
             result.append(c1);
             if (i + 1 < regex.length()) {
                 char c2 = regex.charAt(i + 1);
-                if ((Character.isLetterOrDigit(c1) || c1 == '*' || c1 == '+' || c1 == ')' || c1 == 'e') &&
-                        (Character.isLetterOrDigit(c2) || c2 == '(' || c2 == 'e')) {
+                if ((isOperand(c1) || c1 == '*' || c1 == '+' || c1 == ')' || c1 == 'e') &&
+                        (isOperand(c2) || c2 == '(' || c2 == 'e')) {
                     result.append('.');
                 }
             }
@@ -61,22 +93,23 @@ public class ShuntingYard {
         for (int i = 0; i < infix.length(); i++) {
             char c = infix.charAt(i);
 
-            // Si el caracter es un operando o 'e', añadirlo a la salida
-            if (Character.isLetterOrDigit(c) || c == 'e') {
+            // Si el caracter es un operando (no operador ni símbolo especial), añadirlo a
+            // la salida
+            if (isOperand(c) || c == 'e') {
                 output.append(c);
             }
             // Si el carácter es un paréntesis de apertura, añadirlo a la pila
             else if (c == '(') {
                 stack.push(c);
             }
-            // Si el carácter es un parénntesis de cierre
+            // Si el carácter es un paréntesis de cierre
             else if (c == ')') {
                 while (!stack.isEmpty() && stack.peek() != '(') {
                     output.append(stack.pop());
                 }
                 stack.pop();
             }
-            // Si el caráccter es un operador
+            // Si el carácter es un operador
             else if (isOperator(c)) {
                 while (!stack.isEmpty() && precedence(c) <= precedence(stack.peek())) {
                     if (isRightAssociative(c) && precedence(c) == precedence(stack.peek())) {

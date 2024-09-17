@@ -5,7 +5,6 @@ import java.io.IOException;
 
 public class main {
     public static void main(String[] args) {
-        // Nombre del archivo que contiene las expresiones regulares
         String filename = "src/expresiones.txt";
 
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
@@ -29,7 +28,7 @@ public class main {
 
                     // Visualizar el AFN generado en un archivo .dot
                     NFAtoGraphvizVisitor nfaVisitor = new NFAtoGraphvizVisitor();
-                    nfaVisitor.visit(nfa.start);
+                    nfaVisitor.visit(nfa.start); // Cambiado para que visite el estado inicial
                     String nfaGraph = nfaVisitor.getGraph();
                     String nfaFilename = "nfa_" + count + ".dot";
                     try (FileWriter writer = new FileWriter(nfaFilename)) {
@@ -37,12 +36,31 @@ public class main {
                     }
                     Runtime.getRuntime().exec(new String[] { "dot", "-Tpng", nfaFilename, "-o", nfaFilename + ".png" });
 
+                    // Generar el AFD a partir del AFN usando la construcción de subconjuntos
+                    SubsetConstruction subsetConstruction = new SubsetConstruction(nfa);
+                    DFA dfa = subsetConstruction.toDFA(); // Cambiado a `toDFA()`
+
+                    // Visualizar el AFD generado en un archivo .dot
+                    DFAToGraphvizVisitor dfaVisitor = new DFAToGraphvizVisitor();
+                    dfaVisitor.visit(dfa); // Cambiado para que visite el DFA
+                    String dfaGraph = dfaVisitor.getGraph();
+                    String dfaFilename = "dfa_" + count + ".dot";
+                    try (FileWriter writer = new FileWriter(dfaFilename)) {
+                        writer.write(dfaGraph);
+                    }
+                    Runtime.getRuntime().exec(new String[] { "dot", "-Tpng", dfaFilename, "-o", dfaFilename + ".png" });
+
                     // Simulación del AFN con una cadena de prueba y un límite de visitas
                     int visitLimit = 4; // Número de veces que un estado puede ser visitado
                     String cadena = "aab";
                     boolean result = nfa.simulate(cadena, visitLimit);
                     System.out.println(
                             "La cadena: " + cadena + " es " + (result ? "aceptada" : "rechazada") + " por el AFN.");
+
+                    // Simulación del AFD con la misma cadena de prueba
+                    boolean resultDFA = dfa.simulate(cadena);
+                    System.out.println(
+                            "La cadena: " + cadena + " es " + (resultDFA ? "aceptada" : "rechazada") + " por el AFD.");
 
                     count++;
                 } catch (IllegalArgumentException e) {
