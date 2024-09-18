@@ -86,13 +86,13 @@ class SubsetConstruction {
         return closure;
     }
 
-    // Verificar si el conjunto de estados contiene algún estado de aceptación
     private boolean containsAcceptState(Set<State> states) {
         for (State state : states) {
-            if (state.isAccept) {
+            if (state.isAccept && state == nfa.accept) {// yo lo tenia solo como if(state.isAccept))
                 return true;
             }
         }
         return false;
     }
+
 }

@@ -16,4 +16,9 @@ class State {
     void addTransition(char symbol, State toState) {
         transitions.computeIfAbsent(symbol, k -> new ArrayList<>()).add(toState);
     }
+
+    @Override
+    public String toString() {
+        return "State{id=" + id + ", isAccept=" + isAccept + "}";
+    }
 }
