@@ -32,9 +32,13 @@ public class DFAToGraphvizVisitor {
             return; // No hay transiciones, retornar
         }
 
-        // Recorre las transiciones
-        for (Map.Entry<Character, DFAState> entry : dfa.transitions.get(state).entrySet()) {
+        // Recorre las transiciones utilizando stateTransitions
+        for (Map.Entry<Character, DFAState> entry : stateTransitions.entrySet()) {
             DFAState target = entry.getValue();
+            if (target == null) {
+                System.err.println("Error: Estado de destino null en la transición desde el estado: " + state.id);
+                continue; // Saltar a la siguiente iteración
+            }
             sb.append(String.format("node%d -> node%d [label=\"%c\"];\n", state.id, target.id, entry.getKey()));
             visitState(target, dfa);
         }

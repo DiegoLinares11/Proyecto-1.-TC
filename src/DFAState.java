@@ -25,4 +25,9 @@ public class DFAState {
         DFAState other = (DFAState) obj;
         return Objects.equals(nfaStates, other.nfaStates);
     }
+
+    @Override
+    public String toString() {
+        return "State{id=" + id + "}";
+    }
 }

@@ -38,7 +38,7 @@ public class main {
 
                     // Generar el AFD a partir del AFN usando la construcción de subconjuntos
                     SubsetConstruction subsetConstruction = new SubsetConstruction(nfa);
-                    DFA dfa = subsetConstruction.toDFA(); // Cambiado a `toDFA()`
+                    DFA dfa = subsetConstruction.toDFA(); // Cambiado a toDFA()
 
                     // Visualizar el AFD generado en un archivo .dot
                     DFAToGraphvizVisitor dfaVisitor = new DFAToGraphvizVisitor();
@@ -49,6 +49,20 @@ public class main {
                         writer.write(dfaGraph);
                     }
                     Runtime.getRuntime().exec(new String[] { "dot", "-Tpng", dfaFilename, "-o", dfaFilename + ".png" });
+
+                    dfa.minimize();
+
+                    // DFA minimizado
+                    DFAToGraphvizVisitor dfaVisitor1 = new DFAToGraphvizVisitor();
+                    dfaVisitor1.visit(dfa); // Cambiado para que visite el DFA
+                    String dfaGraph1 = dfaVisitor1.getGraph();
+                    String dfaFilename1 = "dfa_Minimizado" + count + ".dot";
+                    try (FileWriter writer = new FileWriter(dfaFilename1)) {
+                        writer.write(dfaGraph1);
+                    }
+                    Runtime.getRuntime()
+                            .exec(new String[] { "dot", "-Tpng", dfaFilename1, "-o", dfaFilename1 +
+                                    ".png" });
 
                     // Simulación del AFN con una cadena de prueba y un límite de visitas
                     int visitLimit = 4; // Número de veces que un estado puede ser visitado
