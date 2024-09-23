@@ -56,111 +56,180 @@ class DFA {
     }
 
     public void minimize() {
-        // Paso 1: Eliminar estados inalcanzables
-        removeUnreachableStates();
-
-        // Paso 2: Inicializar particiones de estados aceptadores y no aceptadores
-        Set<DFAState> nonAccepting = new HashSet<>(states);
-        nonAccepting.removeAll(acceptStates); // Conjunto de estados no aceptadores
-
-        List<Set<DFAState>> partitions = new ArrayList<>();
-        partitions.add(nonAccepting); // Partición de no aceptadores
-        partitions.add(new HashSet<>(acceptStates)); // Partición de aceptadores
-
-        boolean updated = true;
-
-        // Paso 3: Refinar las particiones
-        while (updated) {
-            updated = false;
-            List<Set<DFAState>> newPartitions = new ArrayList<>();
-
-            for (Set<DFAState> partition : partitions) {
-                Map<Map<DFAState, DFAState>, Set<DFAState>> transitionGroups = new HashMap<>();
-
-                for (DFAState state : partition) {
-                    Map<DFAState, DFAState> transitionGroupKey = new HashMap<>();
-
-                    // Iterar sobre cada símbolo y registrar hacia dónde va cada estado en función
-                    // de las transiciones
-                    for (char symbol : getAlphabet()) {
-                        DFAState nextState = transitions.getOrDefault(state, new HashMap<>()).get(symbol);
-
-                        // Agrupar los estados según las transiciones a otras particiones
-                        DFAState nextPartition = getPartition(partitions, nextState);
-                        transitionGroupKey.put(nextPartition, nextState);
+        // Paso 1: Separar estados en dos grupos: estados de aceptación y no aceptación
+        List<Set<DFAState>> P = new ArrayList<>();
+        Set<DFAState> acceptingStates = new HashSet<>(acceptStates); // Conjunto de estados de aceptación
+        Set<DFAState> nonAcceptingStates = new HashSet<>(states);
+        nonAcceptingStates.removeAll(acceptStates); // Conjunto de estados no aceptadores
+    
+        P.add(acceptingStates);   // Añadir estados de aceptación como una partición
+        P.add(nonAcceptingStates); // Añadir estados no aceptadores como otra partición
+    
+        List<Set<DFAState>> W = new ArrayList<>(P);  // W empieza igual que P
+    
+        // Depuración: imprimir particiones iniciales
+        System.out.println("Particiones iniciales:");
+        for (Set<DFAState> partition : P) {
+            System.out.println("Partición: " + partition);
+        }
+    
+        // Paso 2: Refinar particiones
+        while (!W.isEmpty()) {
+            Set<DFAState> A = W.remove(W.size() - 1);  // Tomamos una partición del conjunto W
+    
+            for (char s : getAlphabet()) {
+                Set<DFAState> X = new HashSet<>();
+    
+                // Buscar todos los estados que tienen una transición con el símbolo 's' hacia los estados en A
+                for (DFAState q : states) {
+                    DFAState targetState = transitions.getOrDefault(q, new HashMap<>()).get(s);
+                    if (targetState != null && A.contains(targetState)) {
+                        X.add(q);
                     }
-
-                    // Agrupar los estados que comparten el mismo patrón de transiciones
-                    transitionGroups.computeIfAbsent(transitionGroupKey, k -> new HashSet<>()).add(state);
                 }
-
-                // Refinar particiones en función de las transiciones
-                newPartitions.addAll(transitionGroups.values());
-
-                if (transitionGroups.size() > 1) {
-                    updated = true; // Las particiones han cambiado
+    
+                // Depuración: imprimir las transiciones hacia la partición A para el símbolo actual
+                System.out.println("Transiciones con símbolo '" + s + "' hacia partición A: " + A);
+                System.out.println("Estados que se pueden mover a la partición A: " + X);
+    
+                // Crear una lista temporal para almacenar las nuevas particiones
+                List<Set<DFAState>> newPartitions = new ArrayList<>();
+    
+                // Para cada partición Y en P, dividir en Y1 y Y2 según las transiciones hacia A
+                for (Set<DFAState> Y : new ArrayList<>(P)) {  // Iteramos sobre una copia de P
+                    Set<DFAState> Y1 = new HashSet<>(Y);
+                    Y1.retainAll(X);  // Y1 es la intersección de Y y X
+                    Set<DFAState> Y2 = new HashSet<>(Y);
+                    Y2.removeAll(X);  // Y2 es Y - X
+    
+                    if (!Y1.isEmpty() && !Y2.isEmpty()) {
+                        // Si Y puede dividirse en Y1 y Y2, reemplazamos Y por Y1 y Y2
+                        newPartitions.add(Y1);
+                        newPartitions.add(Y2);
+    
+                        // Eliminar Y de P y W, ya que se ha dividido
+                        P.remove(Y);
+    
+                        if (W.contains(Y)) {
+                            W.remove(Y);
+                            W.add(Y1);
+                            W.add(Y2);
+                        } else {
+                            W.add(Y1.size() <= Y2.size() ? Y1 : Y2);
+                        }
+    
+                        // Depuración: imprimir las nuevas particiones
+                        System.out.println("Partición Y dividida en Y1: " + Y1 + " y Y2: " + Y2);
+                    } else {
+                        // Si Y no se divide, lo mantenemos como está
+                        newPartitions.add(Y);
+                    }
                 }
+    
+                // Actualizar P con las nuevas particiones refinadas
+                P.clear();
+                P.addAll(newPartitions);
             }
-
-            partitions = newPartitions; // Actualizar particiones refinadas
         }
-
-        // Paso 4: Construir un nuevo DFA minimizado con las particiones refinadas
+    
+        // Paso 3: Refinar más estrictamente los estados de aceptación según las transiciones salientes
+        // Utilizamos una lista temporal para evitar modificar P mientras iteramos
+        List<Set<DFAState>> tempPartitions = new ArrayList<>(P);
+    
+        for (Set<DFAState> partition : tempPartitions) {
+            if (partition.stream().anyMatch(acceptStates::contains)) {
+                // Refinar la partición basada en las transiciones salientes
+                Set<Character> alphabet = getAlphabet();
+                List<Set<DFAState>> refinedPartition = new ArrayList<>();
+                refinedPartition.add(new HashSet<>(partition));
+    
+                for (char symbol : alphabet) {
+                    List<Set<DFAState>> newRefinedPartition = new ArrayList<>();
+    
+                    for (Set<DFAState> subPartition : refinedPartition) {
+                        Map<DFAState, Set<DFAState>> transitionGroups = new HashMap<>();
+    
+                        for (DFAState state : subPartition) {
+                            DFAState nextState = transitions.getOrDefault(state, new HashMap<>()).get(symbol);
+                            transitionGroups.computeIfAbsent(nextState, k -> new HashSet<>()).add(state);
+                        }
+    
+                        newRefinedPartition.addAll(transitionGroups.values());
+                    }
+                    refinedPartition = newRefinedPartition;
+                }
+    
+                // Actualizar P con las nuevas particiones refinadas
+                P.remove(partition);  // Eliminar la partición original
+                P.addAll(refinedPartition);  // Añadir las nuevas particiones refinadas
+    
+                // Depuración: imprimir las particiones refinadas para los estados de aceptación
+                System.out.println("Particiones refinadas de estados de aceptación: " + refinedPartition);
+            }
+        }
+    
+        // Paso 4: Reconstruir el DFA minimizado
+        rebuildDFA(P);
+    }        
+    
+    // Método para reconstruir el DFA minimizado a partir de las particiones
+    private void rebuildDFA(List<Set<DFAState>> partitions) {
         Set<DFAState> newStates = new HashSet<>();
-        Map<DFAState, DFAState> stateMapping = new HashMap<>();
-        DFAState newStart = null;
-
-        // Crear las transiciones correctas entre particiones
+        Map<DFAState, DFAState> representativeMapping = new HashMap<>();
+    
+        // Depuración: imprimir las particiones finales antes de reconstruir el DFA
+        System.out.println("Particiones finales después del refinamiento:");
         for (Set<DFAState> partition : partitions) {
-            if (partition.isEmpty())
-                continue;
-
-            DFAState representative = partition.iterator().next(); // Elegir un representante para la partición
-            DFAState newState = new DFAState(representative.nfaStates, acceptStates.contains(representative),
-                    representative.id);
+            System.out.println("Partición: " + partition);
+        }
+    
+        // Crear nuevos estados, uno por cada partición
+        for (Set<DFAState> partition : partitions) {
+            DFAState representative = partition.iterator().next();  // Elegimos un representante de la partición
+            boolean isAccepting = partition.stream().anyMatch(acceptStates::contains);  // Verificar si hay un estado aceptador en la partición
+            DFAState newState = new DFAState(representative.nfaStates, isAccepting, representative.id);  // Crear nuevo estado
             newStates.add(newState);
-            stateMapping.put(representative, newState);
-
-            if (representative.equals(start)) {
-                newStart = newState;
+    
+            // Depuración: imprimir el estado creado
+            System.out.println("Nuevo estado creado: " + newState + ", ¿Es estado de aceptación? " + isAccepting);
+    
+            // Mapear los estados originales al nuevo representante
+            for (DFAState state : partition) {
+                representativeMapping.put(state, newState);
             }
         }
-
-        // Paso 5: Actualizar las transiciones del nuevo DFA
+    
+        // Crear nuevas transiciones en el DFA minimizado
         Map<DFAState, Map<Character, DFAState>> newTransitions = new HashMap<>();
-        for (Map.Entry<DFAState, Map<Character, DFAState>> entry : transitions.entrySet()) {
-            DFAState fromState = stateMapping.get(entry.getKey()); // Estado original mapeado al nuevo estado minimizado
-            if (fromState == null)
-                continue; // Si no existe, saltar
-
-            Map<Character, DFAState> newMap = new HashMap<>();
-            for (Map.Entry<Character, DFAState> transition : entry.getValue().entrySet()) {
-                DFAState toState = stateMapping.get(transition.getValue()); // Mapeamos el estado destino al nuevo DFA
-                if (toState != null) {
-                    newMap.put(transition.getKey(), toState);
-                }
+        for (DFAState oldState : transitions.keySet()) {
+            DFAState newFromState = representativeMapping.get(oldState);  // Obtener el nuevo estado representativo
+    
+            Map<Character, DFAState> originalTransitions = transitions.get(oldState);
+            for (Map.Entry<Character, DFAState> entry : originalTransitions.entrySet()) {
+                char symbol = entry.getKey();
+                DFAState oldToState = entry.getValue();
+                DFAState newToState = representativeMapping.get(oldToState);  // Obtener el nuevo estado representativo de destino
+    
+                newTransitions.computeIfAbsent(newFromState, k -> new HashMap<>()).put(symbol, newToState);
             }
-            newTransitions.put(fromState, newMap); // Asignamos las nuevas transiciones al nuevo DFA
         }
-
-        // Actualizamos el DFA con los nuevos estados y transiciones minimizados
+    
+        // Actualizar el DFA con los nuevos estados y transiciones
         this.states = newStates;
-        this.start = newStart;
+        this.start = representativeMapping.get(start);  // Actualizar el estado inicial
         this.transitions = newTransitions;
-    }
-
-    // Método para obtener la partición de un estado
-    private DFAState getPartition(List<Set<DFAState>> partitions, DFAState state) {
-        if (state == null) {
-            return null; // Estado de trampa
-        }
-        for (Set<DFAState> partition : partitions) {
-            if (partition.contains(state)) {
-                return partition.iterator().next(); // Devuelve un representante de la partición
+    
+        // Actualizar los estados de aceptación
+        this.acceptStates.clear();
+        for (DFAState state : newStates) {
+            if (state.isAccept) {
+                this.acceptStates.add(state);
             }
         }
-        return null;
-    }
+    
+        // Depuración: imprimir los estados de aceptación finales
+        System.out.println("Estados de aceptación finales en el DFA minimizado: " + this.acceptStates);
+    }        
 
     // Método auxiliar para obtener el alfabeto
     private Set<Character> getAlphabet() {
